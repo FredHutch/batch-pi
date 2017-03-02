@@ -1,0 +1,35 @@
+{
+  "variables": {
+  },
+  "builders": [{
+    "type": "docker",
+    "commit": true,
+    "image": "ubuntu",
+    "author": "mrg@fredhutch.org",
+    "privileged": true
+  }],
+  "provisioners": [
+  {
+    "type": "file",
+    "source": "assets/pi_sim.R",
+    "destination": "/usr/local/bin/pi_sim.R"
+  },
+  {
+    "type":"shell",
+    "script":"scripts/packer-provision.sh"
+  }
+  ],
+  "post-processors": [
+    [
+      {
+        "type": "docker-tag",
+        "repository": "344850189907.dkr.ecr.us-east-1.amazonaws.com/scicomp/pi_sim",
+        "tag": "latest"
+      },
+      {
+        "type": "docker-push",
+        "login_server": "344850189907.dkr.ecr.us-east-1.amazonaws.com/"
+      }
+    ]
+  ]
+}

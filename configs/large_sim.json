@@ -1,0 +1,7 @@
+{
+    "chunks": 10,
+    "iterations_per_chunk": 10000000,
+    "seeds": "random",
+    "job_definition": "arn:aws:batch:us-east-1:344850189907:job-definition/pi_simulation:1",
+    "results_uri": "https://s3.amazonaws.com/bucket"
+}
