@@ -20,6 +20,7 @@ name = args[1]
 seed = as.integer(args[2])
 iterations = as.integer(args[3])
 results_uri = args[4]
+results_uri <- paste0(results_uri, '/', name )
 
 # Gather <iteration> hits using <seed>
 set.seed(seed)
@@ -29,5 +30,6 @@ cat(hits, file="/var/tmp/output", append=FALSE)
 
 # Upload to S3 url using aws command line
 # The container has the role with the necessary permissions... we hope.
-# cmd <= 'aws s3 cp /var/tmp/output s3://pi-simulation/name'
-# shell(cmd, '/bin/bash', mustWork=TRUE)
+cmd <- '/usr/local/bin/aws'
+s3_upload_args <- paste0('s3 cp /var/tmp/output ', results_uri)
+system2(cmd, s3_upload_args)
