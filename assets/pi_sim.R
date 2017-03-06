@@ -16,7 +16,7 @@ sim.pi <- function(iterations = 1000) {
 # pi_sim.R <simulation name> <seed> <number of iterations> <s3 upload uri>
 args = commandArgs(trailingOnly=TRUE)
 
-name = as.integer(args[1])
+name = args[1]
 seed = as.integer(args[2])
 iterations = as.integer(args[3])
 results_uri = args[4]
