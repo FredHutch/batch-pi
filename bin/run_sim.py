@@ -54,7 +54,7 @@ client = boto3.client('batch')
 
 for chunk in range(0, configs['chunks']):
     job_name = "_".join([args.job_name, str(chunk)])
-    results_uri = "/".join(['s3://pi-simulation', job_name])
+    results_uri = 's3://pi-simulation'
 
     job_parameters = {
         'seed': configs['seeds'][chunk],
