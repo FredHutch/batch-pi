@@ -53,14 +53,17 @@ if len(configs['seeds']) != configs['chunks']:
 client = boto3.client('batch')
 
 for chunk in range(0, configs['chunks']):
+    # Creates a "folder" in s3 for this run's results
+    results_uri = "/".join(['s3://pi-simulation', args.job_name])
+    # The individual job name is the root plus _<chunk number>
     job_name = "_".join([args.job_name, str(chunk)])
-    results_uri = 's3://pi-simulation'
 
     job_parameters = {
         'seed': configs['seeds'][chunk],
         'name': job_name,
         'iterations': configs['iterations_per_chunk'],
         'results_uri': results_uri
+
     }
 
     response = client.submit_job(
