@@ -12,21 +12,22 @@ sim.pi <- function(iterations = 1000) {
     return(draws.in)
 }
 
+# Call this as:
+# pi_sim.R <simulation name> <seed> <number of iterations> <s3 upload uri>
 args = commandArgs(trailingOnly=TRUE)
 
-seed = as.integer(args[1])
-iters = as.integer(args[2])
+name = as.integer(args[1])
+seed = as.integer(args[2])
+iterations = as.integer(args[3])
+results_uri = args[4]
 
+# Gather <iteration> hits using <seed>
 set.seed(seed)
+hits = sim.pi(iterations=iterations)
 
-s <- 0
-reps <- 5.0
+cat(hits, file="/var/tmp/output", append=FALSE)
 
-
-for( i in 1:reps ) {
-    s[i] = sim.pi(iterations=iters)
-}
-
-pie <- 4.0*(sum(s)/(reps*iters))
-print(pie)
-print(pi)
+# Upload to S3 url using aws command line
+# The container has the role with the necessary permissions... we hope.
+# cmd <= 'aws s3 cp /var/tmp/output s3://pi-simulation/name'
+# shell(cmd, '/bin/bash', mustWork=TRUE)
