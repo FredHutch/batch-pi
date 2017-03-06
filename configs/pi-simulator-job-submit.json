@@ -1,0 +1,14 @@
+{
+    "jobName": "conclusionally", 
+    "jobQueue": "pi-simulator-queue", 
+    "jobDefinition": "pi_simulation:5", 
+    "parameters": {
+        "name": "conclusionally",
+        "seed": "12345",
+        "iterations": "21474",
+        "results_uri": "s3://pi-simulation"
+    },
+    "containerOverrides": {
+        "memory": 4000
+    }
+}
