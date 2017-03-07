@@ -11,8 +11,8 @@ import time
 
 logging.basicConfig(level=logging.DEBUG)
 # Set log level for boto components
-logging.getLogger('boto3').setLevel(logging.INFO)
-logging.getLogger('botocore').setLevel(logging.INFO)
+logging.getLogger('boto3').setLevel(logging.ERROR)
+logging.getLogger('botocore').setLevel(logging.ERROR)
 
 valid_job_states = [
     'SUBMITTED', 'PENDING', 'RUNNABLE', 'STARTING', 'RUNNING',
@@ -106,10 +106,12 @@ for chunk in range(0, configs['chunks']):
 # Last estimate of pi: 3.134567132 (delta .01...)
 
 running = -1
+s3r = boto3.resource('s3')
 while True:
     # get job descriptions from job_list
     response = client.describe_jobs(jobs=job_list)
     summary = {}  # stor jobs in states here
+
     for state in valid_job_states:
         summary[state] = list(
             (j for j in response['jobs'] if( j['status'] == state))
@@ -117,16 +119,42 @@ while True:
         print("{}: {}".format(state, len(summary[state])))
 
     running = len(
-        summary['SUBMITTED'] + summary['PENDING'] + summary['RUNNABLE'] + summary['STARTING'] + summary['RUNNING']
+        summary['SUBMITTED'] + summary['PENDING'] +
+        summary['RUNNABLE'] + summary['STARTING'] +
+        summary['RUNNING']
     )
+
     logging.debug('len(running) == {}'.format(running))
+
     if running == 0:
         print( "all jobs complete" )
         break
     else:
+        # create running estimate of pi
+        # get all created objects in result bucket if anything is done
+        if len(summary['SUCCEEDED']) > 0:
+            total_hits = 0
+            iterations = 0
+            for x in summary['SUCCEEDED']:
+                # download results from each partial
+                key = '/'.join([args.job_name, x['jobName']])
+                logging.debug(
+                    'download partial result {} from {}'.format(
+                        key,
+                        args.job_name
+                    )
+                )
+                s3object = s3r.Object(
+                    'pi-simulation',
+                    key
+                )
+                hits = int(s3object.get()['Body'].read().decode('utf-8'))
+                iterations = iterations + int(job_parameters['iterations'])
+                total_hits = total_hits + hits
+                pi_e = 4/(iterations/total_hits)
+            logging.info('pi estimate is {}'.format(str(pi_e)))
+
         time.sleep(30)
-
-
 
 # Complete
 
