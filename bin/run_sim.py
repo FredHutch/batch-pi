@@ -7,8 +7,17 @@ import logging
 import json
 import boto3
 from pprint import pprint
+import time
 
 logging.basicConfig(level=logging.DEBUG)
+# Set log level for boto components
+logging.getLogger('boto3').setLevel(logging.INFO)
+logging.getLogger('botocore').setLevel(logging.INFO)
+
+valid_job_states = [
+    'SUBMITTED', 'PENDING', 'RUNNABLE', 'STARTING', 'RUNNING',
+    'SUCCEEDED', 'FAILED'
+]
 
 parser = argparse.ArgumentParser(
     description="Run PI simulation via AWS Batch"
@@ -50,7 +59,9 @@ if len(configs['seeds']) != configs['chunks']:
 #
 # submit <chunks> jobs with parameters seed, iterations, and results_uri
 
+job_list = []  # will contain list of job names submitted
 client = boto3.client('batch')
+
 
 for chunk in range(0, configs['chunks']):
     # Creates a "folder" in s3 for this run's results
@@ -72,8 +83,8 @@ for chunk in range(0, configs['chunks']):
         jobDefinition = 'pi_simulation:5',
         parameters = job_parameters
     )
-    logging.debug(pprint(response))
-
+    job_list.append( response['jobId'] )
+    logging.debug('Submitted job ID: {}'.format(response['jobId']))
 
 
 # Monitor progress
@@ -93,6 +104,29 @@ for chunk in range(0, configs['chunks']):
 #
 # Chunks Complete: 5
 # Last estimate of pi: 3.134567132 (delta .01...)
+
+running = -1
+while True:
+    # get job descriptions from job_list
+    response = client.describe_jobs(jobs=job_list)
+    summary = {}  # stor jobs in states here
+    for state in valid_job_states:
+        summary[state] = list(
+            (j for j in response['jobs'] if( j['status'] == state))
+        )
+        print("{}: {}".format(state, len(summary[state])))
+
+    running = len(
+        summary['SUBMITTED'] + summary['PENDING'] + summary['RUNNABLE'] + summary['STARTING'] + summary['RUNNING']
+    )
+    logging.debug('len(running) == {}'.format(running))
+    if running == 0:
+        print( "all jobs complete" )
+        break
+    else:
+        time.sleep(30)
+
+
 
 # Complete
 
