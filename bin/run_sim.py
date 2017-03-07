@@ -151,7 +151,7 @@ while True:
                 hits = int(s3object.get()['Body'].read().decode('utf-8'))
                 iterations = iterations + int(job_parameters['iterations'])
                 total_hits = total_hits + hits
-                pi_e = 4/(iterations/total_hits)
+            pi_e = 4/(iterations/total_hits)
             logging.info('pi estimate is {}'.format(str(pi_e)))
 
         time.sleep(30)
