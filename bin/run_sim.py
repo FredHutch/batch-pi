@@ -8,8 +8,24 @@ import json
 import boto3
 from pprint import pprint
 import time
+from math import pi as pi_real
 
-logging.basicConfig(level=logging.DEBUG)
+def calculate_pi( s3resource, throws, object_list ):
+    # download objects from s3 and calculate PI from them
+    total_hits = 0
+    iterations = 0
+    for x in object_list:
+        # download results from each partial
+        logging.debug(
+            'download partial result {}'.format(x)
+        )
+        s3object = s3resource.Object( 'pi-simulation', x)
+        hits = int(s3object.get()['Body'].read().decode('utf-8'))
+        iterations = iterations + int(job_parameters['iterations'])
+        total_hits = total_hits + hits
+    return(4/(iterations/total_hits))
+
+logging.basicConfig(level=logging.INFO)
 # Set log level for boto components
 logging.getLogger('boto3').setLevel(logging.ERROR)
 logging.getLogger('botocore').setLevel(logging.ERROR)
@@ -86,6 +102,7 @@ for chunk in range(0, configs['chunks']):
     job_list.append( response['jobId'] )
     logging.debug('Submitted job ID: {}'.format(response['jobId']))
 
+logging.info('Submitted jobs- monitoring progress')
 
 # Monitor progress
 #
@@ -96,14 +113,11 @@ for chunk in range(0, configs['chunks']):
 # This process goes to monitor mode, displaying number of jobs in queue that
 # are in the different states, e.g.:
 #
-# SUBMITTED: 0
-#   PENDING: 3
-#   RUNNING: 2
-#    FAILED: 0
-# SUCCEEDED: 5
+# SUBMITTED |   PENDING |   RUNNING |    FAILED | SUCCEEDED | PI
+#         0 |         3 |         2 |         0 |         5 | 3.1415832999999
+#         0 |         0 |         3 |         0 |         7 | 3.1415456
 #
-# Chunks Complete: 5
-# Last estimate of pi: 3.134567132 (delta .01...)
+# Complete: 10000000 iterations in 10 chunks yeilds pi: 3.1415965090909093
 
 running = -1
 s3r = boto3.resource('s3')
@@ -133,30 +147,32 @@ while True:
         # create running estimate of pi
         # get all created objects in result bucket if anything is done
         if len(summary['SUCCEEDED']) > 0:
-            total_hits = 0
-            iterations = 0
-            for x in summary['SUCCEEDED']:
-                # download results from each partial
-                key = '/'.join([args.job_name, x['jobName']])
-                logging.debug(
-                    'download partial result {} from {}'.format(
-                        key,
-                        args.job_name
-                    )
-                )
-                s3object = s3r.Object(
-                    'pi-simulation',
-                    key
-                )
-                hits = int(s3object.get()['Body'].read().decode('utf-8'))
-                iterations = iterations + int(job_parameters['iterations'])
-                total_hits = total_hits + hits
-            pi_e = 4/(iterations/total_hits)
+            # generate list of objects to download
+            s3_keys = list(
+                ('/'.join([args.job_name,j['jobName']]) for 
+                 j in summary['SUCCEEDED'])
+            )
+            pi_e = calculate_pi(
+                s3r, int(job_parameters['iterations']), s3_keys
+            )
             logging.info('pi estimate is {}'.format(str(pi_e)))
 
-        time.sleep(30)
+        time.sleep(15)
 
 # Complete
 
 # Print final estimate of pi - everything else (save S3) cleans itself up
+            # generate list of objects to download
+s3_keys = list(
+    ('/'.join([args.job_name,j['jobName']]) for 
+     j in summary['SUCCEEDED'])
+)
+pi_e = calculate_pi(s3r, int(job_parameters['iterations']), s3_keys)
+logging.info(
+    '{} iterations, pi estimate is {}, delta is {}'.format(
+        int(job_parameters['iterations'])*len(summary['SUCCEEDED']),
+        str(pi_e),
+        pi_e - pi_real
+    )
+)
 
