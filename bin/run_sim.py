@@ -89,10 +89,6 @@ for chunk in range(0, configs['chunks']):
 
 # Monitor progress
 #
-# For the sake of simplicity, we're just going to assume any job in the queue
-# is working on this task.  When there are no more jobs in submitted, pending,
-# runnable, starting, or running we'll say its complete and shut down.
-
 # This process goes to monitor mode, displaying number of jobs in queue that
 # are in the different states, e.g.:
 #
