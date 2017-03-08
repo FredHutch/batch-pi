@@ -113,9 +113,9 @@ logging.info('Submitted jobs- monitoring progress')
 # This process goes to monitor mode, displaying number of jobs in queue that
 # are in the different states, e.g.:
 #
-# SUBMITTED |   PENDING |   RUNNING |    FAILED | SUCCEEDED | PI
-#         0 |         3 |         2 |         0 |         5 | 3.1415832999999
-#         0 |         0 |         3 |         0 |         7 | 3.1415456
+# SUB | PEND | RUN |  F | S | ITER      | PI        | DELTA
+#   0 |    3 |   2 |  0 | 5 | 500000    | 3.141583+ | 0.000012
+#   0 |    0 |   3 |  0 | 7 | 700000    | 3.141545+ | 0.000005
 #
 # Complete: 10000000 iterations in 10 chunks yeilds pi: 3.1415965090909093
 
