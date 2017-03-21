@@ -12,7 +12,7 @@ from math import pi as pi_real
 import random
 
 # Can't currently retrieve more than 100 jobs via DescribeJobs
-CHUNKS_MAX=100
+CHUNKS_MAX=1000
 
 def calculate_pi( s3resource, throws, object_list ):
     # download objects from s3 and calculate PI from them
@@ -29,7 +29,17 @@ def calculate_pi( s3resource, throws, object_list ):
         total_hits = total_hits + hits
     return(4/(iterations/total_hits))
 
-logging.basicConfig(level=logging.DEBUG)
+def describe_all_jobs( batch_client, job_list ):
+    # chunk job_list into sections (100 max per section, describe_job
+    # limit)
+    all_jobs = {'jobs':[]}
+    for c in range(0, len(job_list), 100):
+        response = batch_client.describe_jobs(jobs=job_list[c:c+100])
+        all_jobs['jobs'] = all_jobs['jobs'] + response['jobs']
+    return all_jobs
+
+
+logging.basicConfig(level=logging.INFO)
 # Set log level for boto components
 logging.getLogger('boto3').setLevel(logging.ERROR)
 logging.getLogger('botocore').setLevel(logging.ERROR)
@@ -147,8 +157,8 @@ running = -1
 s3r = boto3.resource('s3')
 while True:
     # get job descriptions from job_list
-    response = client.describe_jobs(jobs=job_list)
-    summary = {}  # stor jobs in states here
+    response = describe_all_jobs(client, job_list)
+    summary = {}  # store jobs grouped by job state in this dict
 
     for state in valid_job_states:
         summary[state] = list(
@@ -186,7 +196,7 @@ while True:
 # Complete
 
 # Print final estimate of pi - everything else (save S3) cleans itself up
-            # generate list of objects to download
+# generate list of objects to download
 s3_keys = list(
     ('/'.join([args.job_name,j['jobName']]) for 
      j in summary['SUCCEEDED'])
