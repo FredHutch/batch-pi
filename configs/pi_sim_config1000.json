@@ -1,0 +1,4 @@
+{
+    "chunks": 1000,
+    "iterations_per_chunk": "10000000"
+}
