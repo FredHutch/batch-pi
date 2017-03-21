@@ -9,6 +9,7 @@ import boto3
 from pprint import pprint
 import time
 from math import pi as pi_real
+import random
 
 def calculate_pi( s3resource, throws, object_list ):
     # download objects from s3 and calculate PI from them
@@ -25,7 +26,7 @@ def calculate_pi( s3resource, throws, object_list ):
         total_hits = total_hits + hits
     return(4/(iterations/total_hits))
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)
 # Set log level for boto components
 logging.getLogger('boto3').setLevel(logging.ERROR)
 logging.getLogger('botocore').setLevel(logging.ERROR)
@@ -48,6 +49,14 @@ parser.add_argument(
     help='a name for this simulation',
     default='pi_sim'
 )
+parser.add_argument(
+    '--random-seeds', dest='random_seed',
+    action="store_true",
+    help=(
+        'use random values for chunk seeds. Warning: ' +
+        'this will override values in the config file'
+    )
+)
 
 args = parser.parse_args()
 logging.debug('using config file {}'.format(args.config_file))
@@ -62,9 +71,20 @@ with open(args.config_file) as f:
 logging.debug('Loaded configuration')
 
 logging.debug("Checking seeds")
-if len(configs['seeds']) != configs['chunks']:
+if args.random_seed:
+    logging.warning('Using random values for seed chunks')
+    seeds = random.sample( range(10000,99999), configs['chunks'] )
+else:
+    seeds = configs['seeds']
+
+# Everything downstream expects seeds to be string- this is probably a #FIXME
+seeds = list(map(str, seeds))
+
+if len(seeds) != configs['chunks']:
     logging.error('Incorrect number of seeds for number of chunks')
     raise ValueError
+
+logging.debug("Seeds list is: {}".format(seeds))
 
 #   1. s3 bucket ready? create or empty as appropriate.
 #   TODO: Actually do this...
@@ -86,7 +106,7 @@ for chunk in range(0, configs['chunks']):
     job_name = "_".join([args.job_name, str(chunk)])
 
     job_parameters = {
-        'seed': configs['seeds'][chunk],
+        'seed': seeds[chunk],
         'name': job_name,
         'iterations': configs['iterations_per_chunk'],
         'results_uri': results_uri
