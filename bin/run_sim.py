@@ -11,6 +11,9 @@ import time
 from math import pi as pi_real
 import random
 
+# Can't currently retrieve more than 100 jobs via DescribeJobs
+CHUNKS_MAX=100
+
 def calculate_pi( s3resource, throws, object_list ):
     # download objects from s3 and calculate PI from them
     total_hits = 0
@@ -69,6 +72,11 @@ with open(args.config_file) as f:
     configs = json.load(f)
 
 logging.debug('Loaded configuration')
+
+logging.debug('Checking chunks against CHUNKS_MAX={}'.format(CHUNKS_MAX))
+if configs['chunks'] > CHUNKS_MAX:
+    logging.error('Requested chunks exceeds CHUNKS_MAX({})'.format(CHUNKS_MAX))
+    raise ValueError
 
 logging.debug("Checking seeds")
 if args.random_seed:
