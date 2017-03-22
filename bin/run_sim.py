@@ -14,6 +14,20 @@ import random
 # Can't currently retrieve more than 100 jobs via DescribeJobs
 CHUNKS_MAX=1000
 
+# Job State headers
+state_header = {
+    'SUBMITTED':'SUB',
+    'PENDING':'PEND',
+    'RUNNABLE':'QUE',
+    'STARTING':'STRT',
+    'RUNNING':'RUN',
+    'PI': 'PI ESTIMATE',
+    'DELTA': 'DELTA'
+}
+
+progress_format = '{SUBMITTED:>4} {PENDING:>4} {RUNNABLE:>4} ' \
+        '{STARTING:>4} {RUNNING:>4}'
+
 def calculate_pi( s3resource, throws, object_list ):
     # download objects from s3 and calculate PI from them
     total_hits = 0
@@ -155,24 +169,33 @@ logging.info('Submitted jobs- monitoring progress')
 
 running = -1
 s3r = boto3.resource('s3')
+print( (progress_format + ' {PI:<12.12s} {DELTA:<12.12s}').format(**state_header))
+
 while True:
     # get job descriptions from job_list
     response = describe_all_jobs(client, job_list)
-    summary = {}  # store jobs grouped by job state in this dict
+    summary = {}
+    queue_stats = {
+        'SUBMITTED':0,
+        'PENDING':0,
+        'RUNNABLE':0,
+        'STARTING':0,
+        'RUNNING':0,
+        'PI':3,
+        'DELTA':0
+    }
 
     for state in valid_job_states:
         summary[state] = list(
             (j for j in response['jobs'] if( j['status'] == state))
         )
-        print("{}: {}".format(state, len(summary[state])))
+        queue_stats[state] = len(summary[state])
 
     running = len(
         summary['SUBMITTED'] + summary['PENDING'] +
         summary['RUNNABLE'] + summary['STARTING'] +
         summary['RUNNING']
     )
-
-    logging.debug('len(running) == {}'.format(running))
 
     if running == 0:
         print( "all jobs complete" )
@@ -186,11 +209,12 @@ while True:
                 ('/'.join([args.job_name,j['jobName']]) for 
                  j in summary['SUCCEEDED'])
             )
-            pi_e = calculate_pi(
+            queue_stats['PI'] = calculate_pi(
                 s3r, int(job_parameters['iterations']), s3_keys
             )
-            logging.info('pi estimate is {}'.format(str(pi_e)))
+            queue_stats['DELTA'] = queue_stats['PI'] - pi_real
 
+        print((progress_format + " {PI:1.10f} {DELTA:+1.10f}").format( **queue_stats)) 
         time.sleep(15)
 
 # Complete
@@ -203,7 +227,7 @@ s3_keys = list(
 )
 pi_e = calculate_pi(s3r, int(job_parameters['iterations']), s3_keys)
 logging.info(
-    '{} iterations, pi estimate is {}, delta is {}'.format(
+    '{} iterations, pi estimate is {}, delta is {:1.10f}'.format(
         int(job_parameters['iterations'])*len(summary['SUCCEEDED']),
         str(pi_e),
         pi_e - pi_real
